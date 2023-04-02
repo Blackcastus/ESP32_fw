@@ -1,0 +1,7 @@
+vTaskDelay() và delay() là hai hàm khác nhau và được sử dụng trong hai hệ điều hành khác nhau.
+
+delay() là một hàm được cung cấp bởi thư viện Arduino, được sử dụng để giữ cho Arduino đang chạy trong một khoảng thời gian cụ thể trước khi tiếp tục thực hiện các lệnh tiếp theo. Điều này gây ra một tạm dừng hoàn toàn trong việc thực thi của chương trình cho đến khi khoảng thời gian được đặt kết thúc. Trong khi chương trình đang tạm dừng, nó không thể thực hiện bất kỳ công việc nào khác.
+
+Trong khi đó, vTaskDelay() là một hàm được cung cấp bởi hệ điều hành thời gian thực FreeRTOS, được sử dụng để đặt một task vào trạng thái "blocked" trong một khoảng thời gian cụ thể, dưới dạng đơn vị tick (mỗi tick tương ứng với một đơn vị thời gian được cấu hình trên FreeRTOS). Trong khi task đang ở trạng thái blocked, các task khác có thể tiếp tục thực thi. Sau khi khoảng thời gian đã được đặt, task sẽ được chuyển trạng thái từ blocked sang ready, và sẵn sàng để thực thi lại.
+
+Tóm lại, delay() được sử dụng trong các ứng dụng đơn giản hoặc không yêu cầu tính chính xác cao về thời gian, trong khi vTaskDelay() được sử dụng trong các ứng dụng đòi hỏi tính chính xác cao về thời gian và hoạt động ổn định trong môi trường đa nhiệm.

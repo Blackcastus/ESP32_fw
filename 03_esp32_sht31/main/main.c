@@ -1,3 +1,11 @@
+/*
+ * sht3x.c
+ *
+ *  Created on: 2023.05.04.
+ *  Modifier on: 2023.07.04.
+ *      Author: DucHien
+ */
+
 #include <stdio.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
@@ -6,42 +14,42 @@
 #include "freertos/event_groups.h"
 #include <string.h>
 #include "driver/i2c.h"
-#include "sht31.h"
+#include "sht3x.h"
 
 TaskHandle_t TASK_READ_SHT31 = NULL;
 TaskHandle_t TASK_READ_TEMP = NULL;
 TaskHandle_t TASK_READ_HUMI = NULL;
+SHT3x_t sht31;
 
 static const char* TAG = "freeRTOS";
 float t, h;
 
-void Get_SHT31(void * params)
+void Get_SHT31(void *params)
 {
     while(1)
     {
-        if(sht31_readTempHum())
+        if(!sht31_readTempHum(&sht31))
         {
-            t = sht31_GetTemperature();
-            h = sht31_GetHumidity();
+            t = sht31.temp;
+            h = sht31.humi;
         }
         else
         {
             ESP_LOGE(TAG, "Read SHT31 failed");
         }
-       
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }
-void Get_Temp(void * params)
+void Get_Temp(void *params)
 {
     while(1)
     {
         printf("Temp: %2.2f \n", t);
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }
 
-void Get_Humi(void * params)
+void Get_Humi(void *params)
 {
     while(1)
     {

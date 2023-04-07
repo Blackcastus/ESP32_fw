@@ -1,7 +1,8 @@
 /*
- * sht31.h
+ * sht3x.h
  *
  *  Created on: 2023.05.04.
+ *  Modifier on: 2023.07.04.
  *      Author: DucHien
  */
 
@@ -13,8 +14,8 @@
 #include <driver/i2c.h>
 #include <esp_log.h>
 
-#ifndef __SHT31_H_
-#define __SHT31_H_
+#ifndef __SHT3X_H_
+#define __SHT3X_H_
 
 #define SHT31_NUM 				I2C_NUM_0
 #define SHT31_SCL_IO    		22	    /*!< gpio number for I2C master clock */
@@ -29,12 +30,14 @@
 #define SHT31_ACK_VAL    0x0         /*!< I2C ack value */
 #define SHT31_NACK_VAL   0x1         /*!< I2C nack value */
 
+typedef struct
+{
+    bool state;         //state = 0 -> connect, state = 1 -> no connect
+    float temp;         //value temp
+    float humi;         //value humi
+}SHT3x_t;
 
-extern void sht31_init(); // init i2c port
-extern float sht31_GetTemperature();
-extern float sht31_GetHumidity();
-extern bool sht31_readTempHum();
-extern esp_err_t sht31_reset();
-extern uint8_t sht31_crc8(const uint8_t *data, int len);
+void sht31_init(); // init i2c port
+bool sht31_readTempHum(SHT3x_t *sht3x);
 
 #endif /* _COMPONENT_SHT31_H_ */

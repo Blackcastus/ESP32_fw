@@ -1,37 +1,18 @@
 /*
- * Copyright (c) 2017 Junhyuk Lee
+ * sht3x.c
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ *  Created on: 2023.05.04.
+ *  Modifier on: 2023.07.04.
+ *      Author: DucHien
  */
 
-/*
- * sht31.c
- *
- *  Created on: 2017. 9. 25.
- *      Author: neosarchizo
- */
+#include "sht3x.h"
 
-#include "sht31.h"
-
+uint8_t sht31_crc8(const uint8_t *data, int len);
+esp_err_t sht31_reset();
 
 static const char* TAG = "duchien";
-static float humidity, temp;
+// static float humidity, temp;
 
 esp_err_t sht31_reset() {
 	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -66,23 +47,21 @@ void sht31_init() {
 	vTaskDelay(200 / portTICK_PERIOD_MS);
 
 	ESP_ERROR_CHECK(sht31_reset());
-	// vTaskDelay(10 / portTICK_PERIOD_MS);
+
 	ESP_LOGI(TAG, "sht31 init oke");
 }
 
-float sht31_GetTemperature() {
-//	if (!sht31_readTempHum())
-//		return NAN;
-	return temp;
-}
+// float sht31_GetTemperature() {
 
-float sht31_GetHumidity() {
-//	if (!sht31_readTempHum())
-//		return NAN;
-	return humidity;
-}
+// 	return temp;
+// }
 
-bool sht31_readTempHum() {
+// float sht31_GetHumidity() {
+
+// 	return humidity;
+// }
+
+bool sht31_readTempHum(SHT3x_t *sht3x) {
 	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 	i2c_master_start(cmd);
 	i2c_master_write_byte(cmd, (SHT31_ADDRESS << 1) | I2C_MASTER_WRITE,
@@ -97,8 +76,6 @@ bool sht31_readTempHum() {
 		ESP_LOGE(TAG, "0x2400 Failed");
 		return false;
 	}
-
-	// vTaskDelay(500 / portTICK_PERIOD_MS);
 
 	uint8_t readbuffer[6];
 
@@ -119,21 +96,19 @@ bool sht31_readTempHum() {
 	i2c_cmd_link_delete(cmd);
 
 	if (ret == ESP_FAIL) {
+		sht3x->state = 1;
 		ESP_LOGE(TAG, "reading Failed");
-		return false;
+		return 1;
 	}
-
-	// ESP_LOGI(TAG, "HEX : %x %x %x %x %x %x", readbuffer[0], readbuffer[1],
-	// 		readbuffer[2], readbuffer[3], readbuffer[4], readbuffer[5]);
-
 	uint16_t ST, SRH;
 	ST = readbuffer[0];
 	ST <<= 8;
 	ST |= readbuffer[1];
 
 	if (readbuffer[2] != sht31_crc8(readbuffer, 2)) {
+		sht3x->state = 1;
 		ESP_LOGE(TAG, "crc8 : 0 Failed");
-		return false;
+		return 1;
 	}
 
 	SRH = readbuffer[3];
@@ -141,23 +116,27 @@ bool sht31_readTempHum() {
 	SRH |= readbuffer[4];
 
 	if (readbuffer[5] != sht31_crc8(readbuffer + 3, 2)) {
+		sht3x->state = 1;
 		ESP_LOGE(TAG, "crc8 : 1 Failed");
-		return false;
+		return 1;
 	}
 
 	double stemp = ST;
 	stemp *= 175;
 	stemp /= 0xffff;
 	stemp = -45 + stemp;
-	temp = stemp;
+	sht3x->temp = stemp;
 
 	double shum = SRH;
 	shum *= 100;
 	shum /= 0xFFFF;
 
-	humidity = shum;
+	// humidity = shum;
+	// printf("%2.2f\n", shum);
+	sht3x->humi = shum;
+	sht3x->state = 0;
 
-	return true;
+	return 0;
 }
 
 uint8_t sht31_crc8(const uint8_t *data, int len) 

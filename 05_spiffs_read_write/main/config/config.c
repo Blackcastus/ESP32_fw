@@ -2,20 +2,22 @@
  * config.h
  *  save data system
  *  Created on: 2023.07.04.
- *  Modifier on: 2023.07.04.
+ *  Modifier on: 2023.10.04.
  *      Author: DucHien
  */
 
 #include "config.h"
 
 #define SPIFFS_PATH "/spiffs/hello.txt"
+static const char *TAG = "Read_Write_Data";
 
-static const char *TAG = "config data";
+CONFIG_t sys_cfg;
 
-void CFG_Init(void)
+esp_err_t CFG_Spiffs_Init(void)
 {
     esp_err_t err;
     err = nvs_flash_init();
+    ESP_LOGE(TAG, "%d", err);
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
         // NVS partition was truncated and needs to be erased
@@ -24,10 +26,7 @@ void CFG_Init(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
-}
 
-void CFG_Save(void)
-{
     esp_vfs_spiffs_conf_t config = {
         .base_path = "/spiffs",
         .partition_label = NULL,
@@ -35,76 +34,66 @@ void CFG_Save(void)
         .format_if_mount_failed = true,
     };
     esp_vfs_spiffs_register(&config);
-
-    // ESP_LOGE(TAG, "Creating/open New file: data.txt");
-    FILE *f = fopen(SPIFFS_PATH, "w");
-    if (f == NULL)
-    {
-        ESP_LOGE(TAG, "Failed to open file for writing");
-        return;
-    }
-    // open file oke
-    ESP_LOGE(TAG, "Writing data to file");
-
-    char *json = "{\"name\": \"John\", \"age\": 30, \"isStudent\": true}";
-
     
-    size_t len = strlen(json);
+    CFG_Spiffs_Load();
 
-    char *data = malloc(len + 1); // Cần cấp phát thêm 1 byte cho ký tự NULL
-    memset(data, 0, len + 1);
-    strcpy(data, json);
+    if(sys_cfg.cfg_holder != CFG_HOLDER)
+    {
+        sys_cfg.cfg_holder = CFG_HOLDER;
+        strcpy(sys_cfg.ssid, "PhuongHai");
+        strcpy(sys_cfg.pass, "phuongHai123");
+        CFG_Spiffs_Save();
+    }
+    
 
-    // printf("%s\n", json);
+    return err;
 
-    fprintf(f, data);
-
-    fclose(f); // đóng file
-
-    ESP_LOGI(TAG, "File written");
-    // giải phóng bộ nhớ
-    free(data);
 }
-
-void CFG_Load(void)
+Error_Spiffs_t CFG_Spiffs_Save(void)
 {
-    esp_vfs_spiffs_conf_t config = {
-        .base_path = "/spiffs",
-        .partition_label = NULL,
-        .max_files = 5,
-        .format_if_mount_failed = true,
-    };
-    esp_vfs_spiffs_register(&config);
 
-    FILE *file = fopen(SPIFFS_PATH, "r");
+    FILE *file;
+
+    // open file
+    file = fopen(SPIFFS_PATH, "wb");
     if (file == NULL)
     {
-        ESP_LOGE(TAG, "File does not exist!");
+        ESP_LOGE(TAG, "Failed to open file for writing");
+        return ERR_OPEN_FILE;
     }
-    else
+    ESP_LOGI(TAG, "Writing data to file");
+
+    fwrite(&sys_cfg, sizeof(CONFIG_t), 1, file);
+    fclose(file); // dùng để đóng file được mở ra, cũng như giải phóng bộ nhớ chương trình.
+
+    return SPIFFS_OK;
+}
+
+Error_Spiffs_t CFG_Spiffs_Load(void)
+{
+    FILE *file = fopen(SPIFFS_PATH, "rb");
+    if (!file)
     {
-        // Lấy kích thước tệp
-        fseek(file, 0, SEEK_END);
-        long size = ftell(file);
-        fseek(file, 0, SEEK_SET);
-        printf("size file: %ld\n", size);
-
-        char buffer[size +1];
-
-        while (fgets(buffer, sizeof(buffer), file) != NULL)
-        {
-            printf("%s\n", buffer);
-        }
-        fclose(file);
-
-        // Chuyển đổi chuỗi JSON thành đối tượng JSON
-        cJSON *jsondata = cJSON_Parse(buffer);
-        cJSON *nameObject = cJSON_GetObjectItem(jsondata, "name");
-        char *name = nameObject->valuestring;
-
-        printf("name: %s\n", name);
-
-        cJSON_Delete(jsondata);
+        ESP_LOGE(TAG, "File does not exist!");
+        return ERR_OPEN_FILE;
     }
-    esp_vfs_spiffs_unregister(NULL);
+
+    fseek(file, 0, SEEK_END); // di chuyển con trỏ tới vị trí CUỐI file
+    long size = ftell(file);  // trả về vị trí hiện tại của con trỏ file đó chính là kích thước file
+    fseek(file, 0, SEEK_SET); // di chuyển con trỏ tới vị trí ĐẦU file
+    printf("size file: %ld\n", size);
+
+    if(size == 0)
+    {
+        ESP_LOGE(TAG, "Data NULL");
+        return ERR_NODATA;
+    }
+
+    fread(&sys_cfg, sizeof(CONFIG_t), 1, file); // EOF ký tự kết thúc file
+
+    printf("ssid: %s\n", sys_cfg.ssid);
+    printf("pass: %s\n", sys_cfg.pass);
+
+    fclose(file);
+    return SPIFFS_OK;
 }

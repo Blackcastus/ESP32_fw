@@ -9,31 +9,15 @@
 #include "freertos/event_groups.h"
 #include "esp_system.h"
 #include "esp_log.h"
-// #include "config.h"
-#include "ntt.h"
+#include "config.h"
 
-#define TAG "spiffs"
+static const char *TAG = "main";
 
-typedef struct
+int app_main(void)
 {
-    // char name;
-    uint8_t ssid;
-    // int age;
-    // float height;
-} Person_t;
-
-Person_t p;
-
-void app_main(void)
-{
-    Ntt_Init();
-    Ntt_save();
-    // CFG_Init();
-    // vTaskDelay(2000 / portTICK_PERIOD_MS);
-    // CFG_Save();
-    // vTaskDelay(2000 / portTICK_PERIOD_MS);
-    // CFG_Load();
-    // size_t size = sizeof(p);
-    // printf("Size of struct Person: %zu bytes\n", size);
-
+    esp_err_t err;
+    err = CFG_Spiffs_Init();
+    if(err != ESP_OK)
+        ESP_LOGE(TAG, "%d", err);
+    
 }

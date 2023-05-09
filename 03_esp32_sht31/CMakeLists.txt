@@ -5,4 +5,4 @@
 cmake_minimum_required(VERSION 3.16)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(ESP32_SHT31)
+project(03_esp32_sht31)
